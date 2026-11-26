@@ -17,7 +17,7 @@
 | 관리자(사장님) PIN | `201402` (6자리) | `ADMIN_PIN_HASH` = sha256('201402') |
 | 직원 명부 | `방지유` · `우광걸` | `STAFF_LIST` |
 | 사장님(추방 불가) | `방지유` | `OWNER_NAMES` |
-| 공용 장부 주소 | 비어 있음 → 앱 `더보기 → 공용 장부 연동` 에서 `/exec` 주소 입력 | `DEFAULT_SYNC.url` |
+| 공용 장부 주소 | `https://script.google.com/macros/s/AKfycbxXSL5aBcm_SlwxMARQhuU5AIlfLtpAYsXuYiOpcT7sryRjYEdWbdoC5mKBVesN4BtNgg/exec` (2026-11-26 배포) → 앱 `더보기 → 공용 장부 연동` 에 자동으로 채워짐, [저장]만 누르면 연결 | `DEFAULT_SYNC.url` |
 | localStorage 키 | `kt_goesan_*` | — |
 
 ## 파일

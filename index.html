@@ -4094,7 +4094,8 @@
     return String.fromCharCode(48, 51, 49, 53);
   }
   var DEFAULT_SYNC = {
-    url: '',
+    // 2026-11-26 괴산점 Apps Script 웹앱 배포 완료 — 직원은 주소 입력 없이 바로 연결됩니다.
+    url: 'https://script.google.com/macros/s/AKfycbxXSL5aBcm_SlwxMARQhuU5AIlfLtpAYsXuYiOpcT7sryRjYEdWbdoC5mKBVesN4BtNgg/exec',
     pin: defaultStorePin()
   };
 
@@ -8493,7 +8494,7 @@
       var b = window.KTStoreBridge || window.KTChilgeumApp;
       if (!b || typeof b.setAdminNotify !== 'function') return;
       var info = deviceInfo();
-      b.setAdminNotify(!!notifyOn(), String(sync.url || ''), String(sync.pin || ''),
+      b.setAdminNotify(!!notifyOn(), String(sync.url || DEFAULT_SYNC.url || ''), String(sync.pin || DEFAULT_SYNC.pin || ''),
         String(info.deviceId || ''), String(info.name || ''));
     } catch (e) {}
   }
