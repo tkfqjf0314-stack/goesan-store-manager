@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0284c7">
 <meta name="color-scheme" content="light">
-<meta name="app-version" content="v85-g1">
+<meta name="app-version" content="v86-g1">
 <meta name="description" content="KT 텔나라네트웍 괴산점 개통 관리 장부 — 일일 개통 등록, 리베이트 집계, 엑셀 내보내기">
 <title>KT 텔나라네트웍 괴산점 · 개통 관리 장부</title>
 
@@ -999,6 +999,9 @@
   .pol-auto{display:inline-block;font-weight:800;color:#0B4AA2;background:#F0F7FF;border:1px solid #CFE3FA;border-radius:6px;padding:1px 5px;font-size:11px;white-space:nowrap}
   /* v30 — 원스톱 배지 */
   .pbadge.onestop-badge{background:#E9F7EE;color:#0B6B3A;border-color:#BFE6CC}
+  /* v86 — 단말할부 배지 (24·30·36·48개월 / 일시불) */
+  .pbadge.inst-badge{background:#EEF4FF;color:#1D4E9E;border-color:#C9DCFB;margin-left:5px}
+  .pbadge.inst-badge.inst-cash{background:#F1F5F9;color:#475569;border-color:#DCE3EC}
   .pol-diff{display:block;font-size:10px;font-weight:800;color:#8A5200;margin-top:1px}
   /* 순마진 · 추지·페이백 (관리자) */
   .net-cell{display:flex;flex-direction:column;align-items:flex-end;gap:1px;white-space:nowrap}
@@ -1608,6 +1611,9 @@
   .m-money{font-weight:800;font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
   .m-staff{flex:none;color:#475569;font-weight:700;background:#EEF3F9;border-radius:999px;padding:1px 8px;font-size:12px}
   .m-ins{flex:none;color:#0B5F45;font-weight:800;background:var(--green-bg);border:1px solid #BFE3D3;border-radius:999px;padding:1px 8px;font-size:12px;white-space:nowrap}
+  /* v86 — 폰 카드의 단말할부 배지 */
+  .m-inst{flex:none;color:#1D4E9E;font-weight:800;background:#EEF4FF;border:1px solid #C9DCFB;border-radius:999px;padding:1px 8px;font-size:12px;white-space:nowrap}
+  .m-inst.inst-cash{color:#475569;background:#F1F5F9;border-color:#DCE3EC}
   /* v42 — 모바일 카드의 더블카드(2장) 배지 */
   .m-ins.m-ins-double{background:#EEF2FF;color:#3730A3;border:1px solid #C7D2FE}
   .mcard-detail{display:none;border-top:1px solid var(--line);padding:10px 14px 12px;background:#FCFDFF}
@@ -3297,6 +3303,22 @@
           <div class="staff-chips model-chips" id="modelChips"></div>
         </div>
 
+        <!-- v86 — 단말할부 (일시불 / 24·30·36·48개월) · 앱 전용 항목
+             기존 시트(20컴럼)를 고치지 않고도 직원끼리 공유되도록 메모 칸에 [할부:24개월] 표기로만 나간다 -->
+        <div class="field span2" id="instWrap">
+          <label id="f_instLabel">단말할부 <span class="opt">선택 · 다시 누르면 해제</span></label>
+          <input id="f_inst" type="hidden" value="">
+          <div class="ins-chips" id="instChips" role="group" aria-labelledby="f_instLabel">
+            <button type="button" class="ins-chip" data-inst="일시불" aria-pressed="false"
+                    title="할부 없이 일시불로 사는 건 — 다시 누르면 해제됩니다">일시불</button>
+            <button type="button" class="ins-chip" data-inst="24개월" aria-pressed="false">24개월</button>
+            <button type="button" class="ins-chip" data-inst="30개월" aria-pressed="false">30개월</button>
+            <button type="button" class="ins-chip" data-inst="36개월" aria-pressed="false">36개월</button>
+            <button type="button" class="ins-chip" data-inst="48개월" aria-pressed="false">48개월</button>
+          </div>
+          <span class="hint" id="instHint">고르지 않아도 저장됩니다 · 고르면 장부와 공용 장부(메모 [할부:24개월])에 함께 남습니다.</span>
+        </div>
+
         <div class="field span2" id="discWrap">
           <label id="f_discLabel">할인 유형 <span class="opt">선택</span></label>
           <input id="f_discount" type="hidden" value="">
@@ -4536,6 +4558,22 @@
   var INS_VALUES = ['미가입', '파손', '분실+파손'];   // v16: 3종 · 기본값 없음(직접 골라야 저장)
   var INS_MARK = '[단말보험]';                        // 예전 표기(가입) — 읽기 호환
   var INS_TAG = '[보험:';                             // [보험:파손] [보험:분실+파손]
+  /* v86 — 단말할부(일시불 · 24·30·36·48개월) — 단말보험과 같은 방식(시트 메모 표기)으로 공유한다
+     · 앱 안 : 단말할부 = '일시불' | '24개월' | '30개월' | '36개월' | '48개월' | ''(미선택)
+     · 시트   : 메모 칸의 [할부:24개월] / [할부:일시불]  →  Code.gs(20컴럼)를 고치지 않아도 직원끼리 그대로 맞는다 */
+  var INST_VALUES = ['일시불', '24개월', '30개월', '36개월', '48개월'];
+  var INST_TAG = '[할부:';
+  // '24' · '24개월' · '24M' · '일시불' · '현금완납' 같은 표기를 하나로 맞춘다 (모르는 값은 '')
+  function normalizeInst(v) {
+    var s = String(v == null ? '' : v).replace(/[\s()\[\]]/g, '');
+    if (!s) return '';
+    if (/^(일시불|일시|현금|현금완납|완납|full|fullpay)$/i.test(s)) return '일시불';
+    var m = /^(\d{1,2})(?:개월|개월할부|회|m|month|months)?$/i.exec(s);
+    if (!m) return '';
+    var n = parseInt(m[1], 10);
+    return n > 0 ? (n + '개월') : '';
+  }
+  function instLabel(v) { return normalizeInst(v); }
   var CARD_BRANDS = ['우리', '신한', '하나', '롯데', '현대', '삼성', 'KB국민', '기타'];
   var CARD_TAG = '[카드:';
   /* v19 — 외국인 고객 표시(앱 전용) · 시트에는 [외국인] 메모 표기로만 나간다 */
@@ -6622,7 +6660,7 @@
   // 메모에 붙은 표기([단말보험]·[요금완료]·[부가완료]·[추지:150000] 등)를 모두 떼어 내고 상태를 돌려준다
   function splitMemoTags(memo) {
     var s = String(memo == null ? '' : memo);
-    var out = { memo: s, ins: false, planDone: false, addonDone: false, discount: '', conds: [], card: '', foreign: false, gender: '', rrn: 0, wiredGift: '', easy: false, onestop: false, payNone: '', paycardDetail: '', usedDetail: '', payBank: '', payHolder: '', payAcct: '', payDone: false, payUndone: false, payFirst: false, cardDone: false, cardLineDone: '', writtenAt: '', guardName: '', guardBirth: '', guardPhone: '' };
+    var out = { memo: s, ins: false, inst: '', planDone: false, addonDone: false, discount: '', conds: [], card: '', foreign: false, gender: '', rrn: 0, wiredGift: '', easy: false, onestop: false, payNone: '', paycardDetail: '', usedDetail: '', payBank: '', payHolder: '', payAcct: '', payDone: false, payUndone: false, payFirst: false, cardDone: false, cardLineDone: '', writtenAt: '', guardName: '', guardBirth: '', guardPhone: '' };
     var tags = [[INS_MARK, 'ins'], [PLAN_DONE_MARK, 'planDone'], [ADDON_DONE_MARK, 'addonDone'], [FOREIGN_MARK, 'foreign'], [EASY_MARK, 'easy'], [ON_STOP_MARK, 'onestop'], [PAY_DONE_MARK, 'payDone'], [PAY_UNDONE_MARK, 'payUndone'], [PAY_FIRST_MARK, 'payFirst'], [PAYCARD_DONE_MARK, 'cardDone']];
     var hit = false, i;
     for (i = 0; i < tags.length; i++) {
@@ -6634,6 +6672,9 @@
     // 단말보험 3종 표기 [보험:파손] [보험:분실+파손] · 제휴카드 [카드:우리]
     var reIns = /\[보험:\s*([^\]]*)\]/g;
     s = s.replace(reIns, function (all, v) { hit = true; out.ins = normalizeIns(v); return ' '; });
+    // v86 — 단말할부 [할부:24개월] [할부:일시불]
+    var reInst = /\[할부:\s*([^\]]*)\]/g;
+    s = s.replace(reInst, function (all, v) { hit = true; out.inst = normalizeInst(v); return ' '; });
     var reCard = /\[카드:\s*([^\]]*)\]/g;
     s = s.replace(reCard, function (all, v) { hit = true; out.card = normalizeCard(v); return ' '; });
     // 유선 사은품 [유선혜택:상품권 지급] [유선혜택:단말할인쿠폰]
@@ -6756,6 +6797,9 @@
     var ins = normalizeIns(rec.단말보험);
     if (ins === '파손' || ins === '분실+파손' || ins === '미가입') head.push(INS_TAG + ins + ']');
     else if (ins === '가입') head.push(INS_MARK);
+    // v86 — 단말할부 [할부:24개월] [할부:일시불] (미선택이면 표기 자체를 생략)
+    var inst = normalizeInst(rec.단말할부) || normalizeInst(t.inst);
+    if (inst) head.push(INST_TAG + inst + ']');
     var card = normalizeCard(rec.제휴카드);
     if (card) head.push(CARD_TAG + card + ']');
     if (isForeign(rec.외국인)) head.push(FOREIGN_MARK);
@@ -6871,6 +6915,8 @@
     var tags = splitMemoTags(o.메모);
     o.메모 = tags.memo;
     o.단말보험 = tags.ins ? normalizeIns(tags.ins) : normalizeIns(o.단말보험);
+    // v86 — 단말할부: 메모 표기([할부:24개월] · [할부:일시불]) → 값으로 복원
+    o.단말할부 = tags.inst ? normalizeInst(tags.inst) : normalizeInst(r && r.단말할부);
     o.외국인 = tags.foreign ? '외국인' : normalizeForeign(r && r.외국인);
     // v25 — 권매·쉬움: 시트 메모 표기([권매쉬움]) → 상태로 복원
     o.권매쉬움 = tags.easy ? '권매쉬움' : normalizeEasy(r && r.권매쉬움);
@@ -9447,6 +9493,18 @@
     paint: function () { alarmRender(); alarmPaintBadge(); }
   };
 
+  /* v86 — 검증용 손잡이: 단말할부처럼 메모 표기([할부:24개월])로만 시트에 나가는 값이
+     시트(20컴럼)를 그대로 거쳐 돌아와도 살아 있는지 라이브에서 그대로 확인한다 */
+  window.__ktMemo = {
+    inst: function (v) { return normalizeInst(v); },
+    memo: function (rec) { return sheetMemo(normalizeRecord(rec || {})); },
+    tags: function (m) { return splitMemoTags(m); },
+    roundtrip: function (rec) {
+      var sent = sheetRecord(normalizeRecord(rec || {}));
+      return normalizeRecord(sent);
+    }
+  };
+
   /* 모든 달이 필요한 화면(전체 기간·검색·임박·연혁)에 들어갔을 때 — 빈 달을 마저 채운다 */
   function ensureAllMonths() {
     if (!syncOn() || monthApiOk === false || blockedStored()) return Promise.resolve(false);
@@ -9484,6 +9542,7 @@
     for (k in rec) if (rec.hasOwnProperty(k)) out[k] = rec[k];
     out.메모 = sheetMemo(rec);
     delete out.단말보험;
+    delete out.단말할부;
     delete out.외국인;
     delete out.요금제변경완료;
     delete out.부가서비스해지완료;
@@ -9541,6 +9600,8 @@
     snap.담당자 = rec.담당자 || '';
     snap.수정일시 = rec.수정일시 || new Date().toISOString();
     snap.단말보험 = normalizeIns(rec.단말보험);
+    // v86 — 단말할부도 스냅샷에 담는다 (빠뜨리면 서버 왕복 뒤 [할부:24개월] 표기가 풀린다)
+    snap.단말할부 = normalizeInst(rec.단말할부);
     snap.요금제변경완료 = normalizeDone(rec.요금제변경완료);
     snap.부가서비스해지완료 = normalizeDone(rec.부가서비스해지완료);
     // v19 — 앱 전용 항목도 스냅샷에 담는다.
@@ -11644,6 +11705,25 @@
     }
   }
 
+  /* v86 — 단말할부 칩 (일시불 · 24·30·36·48개월) — 한 개만 켜지고, 켜진 칩을 다시 누르면 해제(미선택)
+     · 값은 hidden #f_inst 에 담겨 장부에 저장되고, 시트에는 메모 [할부:24개월] 로만 나간다 */
+  function instOn() {
+    return normalizeInst($('f_inst') ? $('f_inst').value : '');
+  }
+  function setInstChips(v) {
+    var val = normalizeInst(v);
+    var input = $('f_inst');
+    if (input) input.value = val;
+    var box = $('instChips');
+    if (!box) return;
+    var chips = box.querySelectorAll('button[data-inst]');
+    for (var i = 0; i < chips.length; i++) {
+      var on = chips[i].getAttribute('data-inst') === val;
+      chips[i].classList.toggle('on', on);
+      chips[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+  }
+
   /* ---------- 2ND(세컨드 디바이스) — 데이터투게더 전용 (v22) ---------- */
   // 개통유형 무선 줄이 2ND 인가?
   function secondOn() {
@@ -12458,7 +12538,7 @@
   function syncWiredOnlyFields() {
     var only = wiredOnlyOn();
     var used = usedTypeOn();
-    var ids = ['modelWrap', 'discWrap', 'insWrap', 'planWWrap', 'planBox', 'pvBox'];
+    var ids = ['modelWrap', 'instWrap', 'discWrap', 'insWrap', 'planWWrap', 'planBox', 'pvBox'];
     for (var i = 0; i < ids.length; i++) {
       var e = $(ids[i]);
       /* v58 — 중고 2종은 기종(#modelWrap)만 숨긴다. 할인유형·단말보험·무선 요금제·요금제 변경·정책 계산은 그대로 */
@@ -12904,6 +12984,8 @@
           // v28 — 예전 표기('인터넷+TV 신규가입')로 저장된 건도 '인티 신규' 로 찾힌다
           if (r.개통유형) hay += ' ' + typeParts(r.개통유형).map(wiredTypeCanon).join(' ').toLowerCase();
           if (normalizeIns(r.단말보험) === '가입') hay += ' 단말보험 보험가입 가입';
+          // v86 — 단말할부도 전체 검색에 걸린다 ('24개월' · '할부') — 기종 칸에 배지로 보이는 값
+          if (normalizeInst(r.단말할부)) hay += ' 할부 ' + normalizeInst(r.단말할부).toLowerCase();
           if (isEasy(r.권매쉬움)) hay += ' 권매쉬움 권매 쉬움';
           /* v80 — 띄어쓰기 무시 + 모델코드/이름 바꿔 찾기 ('S931' ↔ 갤럭시 S25 · '점프3' ↔ 점프 3) */
           if (!searchHit(hay, qs)) return false;
@@ -15143,6 +15225,15 @@
     return '<span class="muted">—</span>';
   }
 
+  /* v86 — 단말할부 배지 (24·30·36·48개월 / 일시불) — 표·폰 카드 공용
+     · 고르지 않은 건은 배지를 그리지 않는다(— 로 줄을 늘어놓지 않음) */
+  function instBadgeHtml(v) {
+    var s = normalizeInst(v);
+    if (!s) return '';
+    return '<span class="pbadge inst-badge' + (s === '일시불' ? ' inst-cash' : '') +
+      '" title="단말할부 ' + esc(s) + '">' + esc(s) + '</span>';
+  }
+
   // 제휴카드 배지 (1장은 '카드 우리카드' · 더블카드(2장)는 '더블카드 · 우리+국민' / '우리×2')
   function cardBadgeHtml(v) {
     var info = cardBadgeInfo(v);
@@ -15208,6 +15299,7 @@
         '<div class="m-line2">' +
           '<span class="m-model">' + (r.기종 ? esc(r.기종) : '<span class="muted">기종 없음</span>') + '</span>' +
           (isInsured(r.단말보험) ? '<span class="m-ins">보험 ' + esc(insLabel(r.단말보험)) + '</span>' : '') +
+          (normalizeInst(r.단말할부) ? '<span class="m-inst' + (normalizeInst(r.단말할부) === '일시불' ? ' inst-cash' : '') + '">' + esc(normalizeInst(r.단말할부)) + '</span>' : '') +
           cardMobileBadgeHtml(r.제휴카드) +
           policyBadgesHtml(r) +
           '<span class="m-figs">' +
@@ -15232,6 +15324,7 @@
         // v19 — 할인유형·보험·카드는 선택 결과이므로 미가입까지 그대로 보여 준다
         mRow('할인유형', discountLabel(r.할인유형)) +
         mRow('단말보험', normalizeIns(r.단말보험) ? insBadgeHtml(r.단말보험) : '') +
+        mRowOpt('단말할부', instBadgeHtml(r.단말할부)) +   // v86 — 고른 건만 한 줄 보인다
         mRow('제휴카드', normalizeCard(r.제휴카드) ? cardDetailHtml(r.제휴카드) : '') +
         (isForeign(r.외국인) ? mRow('고객 구분', '외국인') : '') +
         mRowOpt('중고폰', r.중고폰 ? esc(r.중고폰) : '') +
@@ -15789,7 +15882,7 @@
         '<td data-label="연락처" class="nowrap">' + (telLink(r.연락처) || '<span class="muted">—</span>') + '</td>' +
         '<td data-label="생년월일" class="nowrap">' + (r.생년월일 ? esc(r.생년월일) : '<span class="muted">—</span>') + '</td>' +
         '<td data-label="개통유형">' + (typeBadgesHtml(r.개통유형) || '<span class="muted">—</span>') + '</td>' +
-        '<td data-label="기종"><span class="ellip" title="' + esc(r.기종) + '">' + (r.기종 ? esc(r.기종) : '<span class="muted">—</span>') + '</span>' + policyBadgesHtml(r) + '</td>' +
+        '<td data-label="기종"><span class="ellip" title="' + esc(r.기종) + '">' + (r.기종 ? esc(r.기종) : '<span class="muted">—</span>') + '</span>' + instBadgeHtml(r.단말할부) + policyBadgesHtml(r) + '</td>' +
         '<td data-label="단말보험" class="ins-cell">' + insBadgeHtml(r.단말보험) + cardBadgeHtml(r.제휴카드) + '</td>' +
         '<td data-label="요금제"><span class="ellip" title="' + esc(r.요금제) + '">' + (r.요금제 ? esc(r.요금제) : '<span class="muted">—</span>') + '</span>' + wiredGiftBadgeHtml(r) + onestopBadgeHtml(r) + '</td>' +
         '<td data-label="변경요금제"><span class="ellip" title="' + esc(r.변경요금제) + '">' + (r.변경요금제 ? esc(r.변경요금제) : '<span class="muted">—</span>') + '</span></td>' +
@@ -17070,6 +17163,7 @@
     $('f_model').value = r.기종 || '';
     markModelChips($('f_model').value);
     setInsChips(r.단말보험);
+    setInstChips(r.단말할부);   // v86 — 저장된 단말할부(24·30·36·48개월 / 일시불) 복원
     setForeignChip(isForeign(r.외국인));
     setEasyChip(isEasy(r.권매쉬움));
     setGenderChips(r.성별 || '');
@@ -17491,6 +17585,8 @@
       개통유형: $('f_type').value,
       기종: (wiredOnly || usedTypeOn()) ? '' : $('f_model').value.trim(),   // v58 — 중고 2종은 기종 없이 저장
       단말보험: wiredOnly ? '' : normalizeIns($('f_ins').value),
+      // v86 — 단말할부 (일시불 / 24·30·36·48개월 · 시트에는 메모 [할부:24개월] 로 왕복)
+      단말할부: wiredOnly ? '' : normalizeInst($('f_inst').value),
       외국인: foreignOn() ? '외국인' : '',
       성별: genderOn(),
       제휴카드: syncCardValue(),
@@ -19436,6 +19532,14 @@
       var b = e.target && e.target.closest ? e.target.closest('button[data-ins]') : null;
       if (!b) return;
       setInsChips(b.getAttribute('data-ins'));
+    });
+    setInstChips('');
+    var instBox = $('instChips');
+    if (instBox) instBox.addEventListener('click', function (e) {
+      var b = e.target && e.target.closest ? e.target.closest('button[data-inst]') : null;
+      if (!b) return;
+      var iv = b.getAttribute('data-inst');
+      setInstChips(instOn() === iv ? '' : iv);   // 같은 칩을 다시 누르면 해제(미선택)
     });
     renderCardBrands();
     setCardChips('');

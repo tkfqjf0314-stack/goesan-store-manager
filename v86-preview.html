@@ -9493,6 +9493,18 @@
     paint: function () { alarmRender(); alarmPaintBadge(); }
   };
 
+  /* v86 — 검증용 손잡이: 단말할부처럼 메모 표기([할부:24개월])로만 시트에 나가는 값이
+     시트(20컴럼)를 그대로 거쳐 돌아와도 살아 있는지 라이브에서 그대로 확인한다 */
+  window.__ktMemo = {
+    inst: function (v) { return normalizeInst(v); },
+    memo: function (rec) { return sheetMemo(normalizeRecord(rec || {})); },
+    tags: function (m) { return splitMemoTags(m); },
+    roundtrip: function (rec) {
+      var sent = sheetRecord(normalizeRecord(rec || {}));
+      return normalizeRecord(sent);
+    }
+  };
+
   /* 모든 달이 필요한 화면(전체 기간·검색·임박·연혁)에 들어갔을 때 — 빈 달을 마저 채운다 */
   function ensureAllMonths() {
     if (!syncOn() || monthApiOk === false || blockedStored()) return Promise.resolve(false);
