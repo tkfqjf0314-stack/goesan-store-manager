@@ -1,0 +1,74 @@
+plugins {
+    id 'com.android.application'
+}
+
+// 릴리스 APK도 별도 keystore 없이 폰에 바로 설치할 수 있도록 debug keystore로 서명한다.
+// keystore가 없으면 빌드할 때 keytool로 한 번 만들어 준다(android/.keystore, git 제외).
+def ktKeystore = new File(
+        System.getenv('KT_DEBUG_KEYSTORE') ?: "${rootProject.projectDir}/.keystore/kt-debug.keystore")
+def keytoolBin = new File(System.getProperty('java.home'), 'bin/keytool').absolutePath
+
+tasks.register('ensureDebugKeystore', Exec) {
+    onlyIf { !ktKeystore.exists() }
+    doFirst { ktKeystore.parentFile.mkdirs() }
+    commandLine keytoolBin, '-genkeypair', '-v',
+            '-keystore', ktKeystore.absolutePath,
+            '-storepass', 'android',
+            '-keypass', 'android',
+            '-alias', 'androiddebugkey',
+            '-keyalg', 'RSA',
+            '-keysize', '2048',
+            '-validity', '10000',
+            '-dname', 'CN=Android Debug,O=Android,C=US'
+}
+
+tasks.configureEach { task ->
+    if (task.name.startsWith('package') || task.name.startsWith('validateSigning')) {
+        task.dependsOn 'ensureDebugKeystore'
+    }
+}
+
+android {
+    namespace 'com.ktgoesan.ledger'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.ktgoesan.ledger'
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    signingConfigs {
+        ktdebug {
+            storeFile ktKeystore
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+            shrinkResources false
+            signingConfig signingConfigs.ktdebug
+        }
+        release {
+            minifyEnabled false
+            shrinkResources false
+            signingConfig signingConfigs.ktdebug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}

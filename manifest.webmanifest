@@ -1,0 +1,30 @@
+{
+  "id": "./",
+  "name": "KT 텔나라네트웍 괴산점 개통장부",
+  "short_name": "괴산점개통장부",
+  "description": "KT 텔나라네트웍 괴산점 개통 관리 장부 — 일일 개통 등록, 요금제 변경 알림, 리베이트 집계, 엑셀 내보내기",
+  "lang": "ko",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#f8fafc",
+  "theme_color": "#0284c7",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

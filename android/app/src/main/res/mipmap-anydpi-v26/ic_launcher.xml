@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 괴산점 개통장부 — 흰 배경 + KT 공식 `kt` 마크(블랙·레드) + 붉은 `괴산점` + `개통장부`
+     전경은 mipmap-*dpi/ic_launcher_foreground.png (108dp 비트맵, 안전 영역 안에 내용) -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+</adaptive-icon>

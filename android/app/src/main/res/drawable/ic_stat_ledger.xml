@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v2.1 — 새 개통 알림 작은 아이콘 (상태바 · 흰색 단색) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M6,2h9l5,5v15H6zM14,3.5V8h4.5zM8,11h8v1.6H8zM8,14.2h8v1.6H8zM8,17.4h5v1.6H8z" />
+</vector>

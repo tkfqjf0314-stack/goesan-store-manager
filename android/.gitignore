@@ -1,0 +1,11 @@
+# android/.gitignore — 빌드 산출물·서명 키 제외
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+captures/
+.externalNativeBuild/
+.cxx/
+app/release/
+.keystore/
