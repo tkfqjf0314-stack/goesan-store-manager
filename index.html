@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0284c7">
 <meta name="color-scheme" content="light">
-<meta name="app-version" content="v86-g1">
+<meta name="app-version" content="v87-g1">
 <meta name="description" content="KT 텔나라네트웍 괴산점 개통 관리 장부 — 일일 개통 등록, 리베이트 집계, 엑셀 내보내기">
 <title>KT 텔나라네트웍 괴산점 · 개통 관리 장부</title>
 
@@ -1291,6 +1291,10 @@
   }
   .pchip:hover{background:#F4F7FB}
   .pchip.on{background:var(--blue-50);border-color:#9DBDF0;color:var(--blue-700)}
+  /* v87 — 1년 · 2년 칩 (유선 요금제 변경 · 개통일 기준 +1년/+2년) 한 톤 강조 */
+  .pchip.pchip-year{border-color:#9DBDF0;background:#F7FAFF;color:var(--blue-700);font-weight:800}
+  .pchip.pchip-year:hover{background:#EAF2FF}
+  .pchip.pchip-year.on{background:var(--blue-700);border-color:var(--blue-700);color:#fff}
   /* v30 — 원스톱 체크 칩 (켜짐을 초록으로 선명하게) */
   .onestop-chips .pchip{border-color:#BFE6CC;background:#F6FCF8;color:#0B6B3A;font-weight:800}
   .onestop-chips .pchip:hover{background:#E9F7EE;border-color:#8FD3A6}
@@ -3408,11 +3412,11 @@
           <div class="fsec-head"><span class="fsec-bar" aria-hidden="true"></span>부가 · 변경<span class="fsec-note">바꿀 때만 입력</span></div>
           <div class="fsec-body">
 
-        <!-- 바꿀 때만 쓰는 영역 — 요금제 변경 -->
+        <!-- 바꿀 때만 쓰는 영역 — 요금제 변경 (v87: 유선 단독에서도 열리고 1년·2년 자동계산) -->
         <div class="form-box" id="planBox">
           <div class="form-box-head">
-            <span class="fb-title">요금제 변경</span>
-            <span class="fb-note">바꿀 때만 선택</span>
+            <span class="fb-title" id="planBoxTitle">요금제 변경</span>
+            <span class="fb-note" id="planBoxNote">바꿀 때만 선택</span>
             <span class="grow"></span>
             <input id="f_plan_none" type="hidden" value="">
             <div class="period-chips none-chips" id="planNoneChips">
@@ -3422,8 +3426,8 @@
 
           <div class="field">
             <div class="field-head">
-              <label for="f_newplan">변경요금제 <span class="opt">선택</span></label>
-              <button type="button" class="field-pick" data-plan-pick="f_newplan">요금제 선택</button>
+              <label for="f_newplan"><span id="newPlanTitle">변경요금제</span> <span class="opt">선택</span></label>
+              <button type="button" class="field-pick" data-plan-pick="f_newplan" id="newPlanPick">요금제 선택</button>
             </div>
             <input id="f_newplan" type="text" autocomplete="off" placeholder="예) 90 · 베이직 · 5G 슬림 14GB">
             <div class="plan-suggest" id="sug_f_newplan" role="listbox" aria-label="변경요금제 검색 결과"></div>
@@ -3434,8 +3438,10 @@
             <div class="period-row">
               <div class="period-chips" id="planPeriodChips">
                 <button type="button" class="pchip" data-period="none">없음</button>
-                <button type="button" class="pchip" data-period="4">4개월</button>
-                <button type="button" class="pchip" data-period="6">6개월</button>
+                <button type="button" class="pchip" data-period="4" data-wireless-only="1" title="개통일 +124일">4개월</button>
+                <button type="button" class="pchip" data-period="6" data-wireless-only="1" title="개통일 +184일">6개월</button>
+                <button type="button" class="pchip pchip-year" data-period="1y" title="개통일에서 정확히 1년 뒤 날짜가 들어갑니다">1년</button>
+                <button type="button" class="pchip pchip-year" data-period="2y" title="개통일에서 정확히 2년 뒤 날짜가 들어갑니다">2년</button>
                 <button type="button" class="pchip" data-period="custom">직접입력</button>
               </div>
               <input id="f_newdate" type="date">
@@ -12180,8 +12186,14 @@
 
   function showPlanSuggest(input) {
     if (!input) return;
-    var only = input.id === 'f_plan_l' ? 'wired'
-      : ((input.id === 'f_plan' || input.id === 'f_newplan') ? 'mobile' : '');
+    /* v87 — 변경요금제(f_newplan)도 개통유형을 따라간다: 유선 단독 → 유선만, 무선+유선 → 둘 다, 무선만 → 모바일만 */
+    var only;
+    if (input.id === 'f_plan_l') only = 'wired';
+    else if (input.id === 'f_newplan') {
+      var sp = typeSlots($('f_type') ? $('f_type').value : '');
+      only = (sp.l && !sp.w) ? 'wired' : (sp.l ? '' : 'mobile');
+    } else if (input.id === 'f_plan') only = 'mobile';
+    else only = '';
     var list = planSearch(input.value, only);
     if (!list.length) { hidePlanSuggest(); return; }
     planSug = { input: input, list: list, active: 0 };
@@ -12223,6 +12235,13 @@
 
   function pickSuggestion(input, plan) {
     if (!plan) return;
+    /* v87 — 변경요금제(#f_newplan)는 무선·유선 어느 쪽이든 한 칸짜리 값이라 나누지 않고 그대로 넣는다 */
+    if (input.id === 'f_newplan') {
+      hidePlanSuggest();
+      setPlanField(input, planInsertText(plan));
+      try { input.focus(); } catch (err) {}
+      return;
+    }
     var raw = String(input.value || '');
     var cur = splitPlanValue(raw);
     // 칸을 새로 치면 '/' 뒤 유선부가 지워지므로, 칸을 잡았을 때 값을 되살린다
@@ -12389,7 +12408,12 @@
     var target = targetId || 'f_plan';
     // v19 — 무선 요금제 칸은 모바일만, 유선 요금제 칸은 유선만 채운다
     // v29 — 변경요금제(#f_newplan)도 모바일 요금제만 고른다 (유선 상품이 섞이지 않게)
-    var only = target === 'f_plan_l' ? 'wired' : 'mobile';
+    // v87 — 유선 단독 건의 변경요금제는 유선 상품이므로 유선만, 무선+유선 동시 건은 둘 다 고를 수 있게
+    var slotPick = typeSlots($('f_type') ? $('f_type').value : '');
+    var only;
+    if (target === 'f_plan_l') only = 'wired';
+    else if (target === 'f_newplan') only = (slotPick.l && !slotPick.w) ? 'wired' : (slotPick.l ? 'both' : 'mobile');
+    else only = 'mobile';
     planPick = { target: target, tab: only === 'wired' ? 'wired' : 'mobile', wired: {}, only: only };
     paintPlanTabs();
     setPlanTab(planPick.tab);
@@ -12410,12 +12434,15 @@
       head.textContent = planPick.only === 'wired'
         ? (function () {
             var cats = wiredPickerCats();
+            var into = planPick.target === 'f_newplan' ? '변경요금제(유선) 칸' : '유선 요금제 칸';
             if (cats.length < 4) {
               return '고른 유선 개통유형에 필요한 ' + cats.map(function (c) { return c === '셋탑박스' ? '셋탑' : c; }).join(' · ') +
-                '만 나옵니다 — 고른 것만 조합되어 유선 요금제 칸에 들어갑니다';
+                '만 나옵니다 — 고른 것만 조합되어 ' + into + '에 들어갑니다';
             }
-            return '인터넷 · WiFi · 지니 TV · 셋탑에서 고른 것만 조합되어 유선 요금제 칸에 들어갑니다';
+            return '인터넷 · WiFi · 지니 TV · 셋탑에서 고른 것만 조합되어 ' + into + '에 들어갑니다';
           })()
+        : (planPick.only === 'both' && planPick.target === 'f_newplan')
+          ? '무선은 칩을 누르면 바로, 유선은 고른 것만 조합되어 변경요금제 칸에 들어갑니다'
         : (secondOn() && planPick.only !== 'wired')
           ? '2ND(세컨드 디바이스) 개통입니다 — 데이터투게더 요금제만 고를 수 있습니다'
         : planPick.only === 'mobile'
@@ -12491,10 +12518,10 @@
     if (!txt) return;
     var input = $(planPick.target);
     if (input) {
-      if (planPick.target === 'f_plan_l') {
-        // 유선 요금제 칸 — 고른 조합을 그대로 넣는다
+      if (planPick.target === 'f_newplan' || planPick.target === 'f_plan_l' || planPick.only === 'wired') {
+        // 변경요금제·유선 요금제 칸 — 고른 조합을 그대로 넣는다 (한 칸짜리 값)
         setPlanField(input, txt);
-        syncWiredPlanField();
+        if (planPick.target === 'f_plan_l') syncWiredPlanField();
       } else {
         var cur = splitPlanValue(input.value);
         setPlanField(input, joinPlanValue(cur.w, txt));
@@ -12525,8 +12552,9 @@
   }
 
   /* v48 — 유선 단독일 때만 무선 전용 5칸을 숨긴다.
-     · 숨김: 기종(#modelWrap) · 할인유형(#discWrap) · 단말보험(#insWrap) · 무선 요금제(#planWWrap) · 요금제 변경(#planBox) + 무선 정책 자동 계산(#pvBox)
+     · 숨김: 기종(#modelWrap) · 할인유형(#discWrap) · 단말보험(#insWrap) · 무선 요금제(#planWWrap) + 무선 정책 자동 계산(#pvBox)
      · 그대로 둠: 제휴카드 · 부가서비스 · 중고폰 · 유선 요금제(#planLWrap) · 유선 사은품 · 유선 리베이트
+     v87 — **요금제 변경(#planBox)은 유선 단독에서도 연다**: 변경요금제 칸을 유선 상품용으로 바꾸고 1년·2년 칩을 남긴다
      값은 지우지 않는다 — 무선 칩을 다시 누르면 적어 둔 값 그대로 돌아온다(저장할 때만 collectForm 이 무선값을 비운다).
      v58 — 중고신규·중고MNP 면 위 6칸 중 **기종(#modelWrap)만** 숨긴다(할인유형·단말보험·요금제·정책 계산은 그대로). */
   /* v58 — 중고신규·중고MNP 인가? (중고 기기는 기종을 적지 않는다) */
@@ -12538,14 +12566,29 @@
   function syncWiredOnlyFields() {
     var only = wiredOnlyOn();
     var used = usedTypeOn();
-    var ids = ['modelWrap', 'instWrap', 'discWrap', 'insWrap', 'planWWrap', 'planBox', 'pvBox'];
+    var ids = ['modelWrap', 'instWrap', 'discWrap', 'insWrap', 'planWWrap', 'pvBox'];
     for (var i = 0; i < ids.length; i++) {
       var e = $(ids[i]);
-      /* v58 — 중고 2종은 기종(#modelWrap)만 숨긴다. 할인유형·단말보험·무선 요금제·요금제 변경·정책 계산은 그대로 */
+      /* v58 — 중고 2종은 기종(#modelWrap)만 숨긴다. 할인유형·단말보험·무선 요금제·정책 계산은 그대로 */
       var hide = only || (used && ids[i] === 'modelWrap');
       if (e) e.classList.toggle('won-hide', hide);
     }
     if (only && $('formRisk')) { $('formRisk').hidden = true; $('formRisk').innerHTML = ''; }
+    /* v87 — 요금제 변경 칸은 유선 단독에서도 보인다. 무선이면 예전 그대로, 유선 단독이면 유선 상품용으로 바꾼다 */
+    var box = $('planBox');
+    if (box) box.classList.toggle('wired-mode', only);
+    if ($('planBoxTitle')) $('planBoxTitle').textContent = only ? '유선 요금제 변경' : '요금제 변경';
+    if ($('planBoxNote')) $('planBoxNote').textContent = only ? '1년 · 2년 자동계산' : '바꿀 때만 선택';
+    if ($('newPlanTitle')) $('newPlanTitle').textContent = only ? '변경요금제(유선)' : '변경요금제';
+    if ($('newPlanPick')) $('newPlanPick').textContent = only ? '유선 요금제 선택' : '요금제 선택';
+    if ($('f_newplan')) {
+      $('f_newplan').placeholder = only
+        ? '예) 인터넷 베이직 + 지니 TV 에센스'
+        : '예) 90 · 베이직 · 5G 슬림 14GB';
+    }
+    /* 유선 단독에서는 4·6개월 칩을 감추고 없음 · 1년 · 2년 · 직접입력만 남긴다 (값은 그대로) */
+    var wChips = document.querySelectorAll('#planPeriodChips button[data-wireless-only]');
+    for (var k = 0; k < wChips.length; k++) wChips[k].classList.toggle('won-hide', only);
   }
 
   function openSyncDialog() {
@@ -15002,7 +15045,7 @@
   }
 
   // 목록 표의 변경일자·해지일자 칸 — 둘은 완전히 별개 (각자의 날짜·완료 버튼·배지)
-  /* v65 — 요금제 유지기간: 개통일과 요금제변경일자의 일수 차이로 4개월(124일)·6개월(184일)을 되짚는다
+  /* v65 — 요금제 유지기간: 개통일과 요금제변경일자의 일수 차이로 4개월(124일)·6개월(184일)·1년·2년을 되짚는다
      · 시트 20컴럼도 건드리지 않고, 변경요금제·변경일자가 둘 다 있을 때만 계산한다 */
   function dayGap(fromIso, toIso) {
     var a = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(fromIso || ''));
@@ -15017,6 +15060,8 @@
     if (d === null || d <= 0) return '';
     if (d >= 115 && d <= 135) return '4개월';
     if (d >= 175 && d <= 195) return '6개월';
+    if (d >= 355 && d <= 375) return '1년';
+    if (d >= 720 && d <= 740) return '2년';
     if (d >= 60) return Math.round(d / 30.44) + '개월';
     return d + '일';
   }
@@ -16606,11 +16651,14 @@
     if (confirmResolve) { var f = confirmResolve; confirmResolve = null; f(v); }
   }
 
-  /* ---------------- 기간 자동계산 (4개월 / 6개월) ---------------- */
+  /* ---------------- 기간 자동계산 (4개월 / 6개월 / 1년 / 2년) ---------------- */
   var period = { plan: 'none', addon: 'none' };
 
   // 4개월 = 개통일 +124일 · 6개월 = 개통일 +184일 (매장 기준 유지일수 — 달력 개월 계산이 아니다)
   var PERIOD_DAYS = { '4': 124, '6': 184 };
+  /* v87 — 1년 · 2년은 달력 기준 정확히 +1년 / +2년 (유선 요금제 변경에 주로 쓴다) */
+  var PERIOD_YEARS = { '1y': 1, '2y': 2 };
+  var PERIOD_PRESET = { '4': 1, '6': 1, '1y': 1, '2y': 1 };
 
   function addDays(iso, days) {
     var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
@@ -16621,14 +16669,34 @@
     return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
   }
 
+  // v87 — 개통일 +1년 / +2년. 2월 29일 개통은 다음 해 그 달 말일(2/28)로 맞춘다
+  function addYears(iso, years) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+    if (!m) return '';
+    if (+m[2] < 1 || +m[2] > 12 || +m[3] < 1 || +m[3] > 31) return '';
+    var y = +m[1] + Number(years), mo = +m[2] - 1, d = +m[3];
+    var last = new Date(y, mo + 1, 0).getDate();
+    var dt = new Date(y, mo, Math.min(d, last));
+    if (isNaN(dt.getTime())) return '';
+    return y + '-' + pad2(mo + 1) + '-' + pad2(dt.getDate());
+  }
+
   function periodDate(iso, p) {
+    if (PERIOD_YEARS[p]) return addYears(iso, PERIOD_YEARS[p]);
     return PERIOD_DAYS[p] ? addDays(iso, PERIOD_DAYS[p]) : '';
+  }
+
+  function periodTitle(p) {
+    if (PERIOD_YEARS[p]) return '개통일 + ' + PERIOD_YEARS[p] + '년';
+    return '개통일 + ' + PERIOD_DAYS[p] + '일';
   }
 
   function inferPeriod(dateVal, baseIso) {
     if (!dateVal) return 'none';
     if (baseIso && dateVal === periodDate(baseIso, '4')) return '4';
     if (baseIso && dateVal === periodDate(baseIso, '6')) return '6';
+    if (baseIso && dateVal === periodDate(baseIso, '1y')) return '1y';
+    if (baseIso && dateVal === periodDate(baseIso, '2y')) return '2y';
     return 'custom';
   }
 
@@ -16655,10 +16723,10 @@
       var m = map[i];
       if (!m.badge) continue;
       var val = m.input ? String(m.input.value || '') : '';
-      if ((m.p === '4' || m.p === '6') && val) {
+      if (PERIOD_PRESET[m.p] && val) {
         m.badge.innerHTML = '<b>' + esc(val) + '</b> 예정';
         m.badge.hidden = false;
-        m.badge.setAttribute('title', '개통일 + ' + PERIOD_DAYS[m.p] + '일');
+        m.badge.setAttribute('title', periodTitle(m.p));
       } else {
         m.badge.hidden = true;
         m.badge.innerHTML = '';
@@ -16671,7 +16739,7 @@
     var val = kind === 'plan' ? period.plan : period.addon;
     var input = kind === 'plan' ? $('f_newdate') : $('f_addondate');
     if (!input) return;
-    if (val === '4' || val === '6') {
+    if (PERIOD_PRESET[val]) {
       input.value = periodDate($('f_date').value || todayISO(), val);
     } else if (val === 'none') {
       input.value = '';
@@ -16680,10 +16748,10 @@
   }
 
   function recalcPeriods() {
-    if (period.plan === '4' || period.plan === '6') {
+    if (PERIOD_PRESET[period.plan]) {
       $('f_newdate').value = periodDate($('f_date').value || todayISO(), period.plan);
     }
-    if (period.addon === '4' || period.addon === '6') {
+    if (PERIOD_PRESET[period.addon]) {
       $('f_addondate').value = periodDate($('f_date').value || todayISO(), period.addon);
     }
     renderExpect();
@@ -17206,8 +17274,8 @@
     // v51 — 기존 건을 ✏️ 수정으로 열 때, 내용이 비어 있으면 [변경 없음] · [미가입] 을 켠 채로 연다.
     //   (이 두 칸은 시트 20컬럼에 빈칸으로만 저장되므로, 예전처럼 풀린 채 열리면 한 번 더 눌러야 저장됐다)
     if (rec) {
-      var wiredOnlyRec = (function () { var sW = typeSlots(r.개통유형 || ''); return !!sW.l && !sW.w; })();
-      if (!wiredOnlyRec && !String(r.변경요금제 || '').trim() && !$('f_newdate').value) {
+      /* v87 — 유선 단독 건도 요금제 변경 칸이 보이므로, 빈 유선 건은 [변경 없음]을 켜 둔 채로 연다 */
+      if (!String(r.변경요금제 || '').trim() && !$('f_newdate').value) {
         $('f_plan_none').value = '변경 없음';
       }
       if (!String(r.부가서비스 || '').trim() && !$('f_addondate').value
@@ -17399,13 +17467,16 @@
     // 요금제 변경 · 부가서비스 — '변경 없음'/'미가입'을 골랐거나, 내용을 적었을 때만 저장된다
     var hasPlanChange = !!($('f_newplan').value.trim() || $('f_newdate').value || (period.plan && period.plan !== 'none'));
     // v65 — 요금제는 목록에서 고른 정확한 명칭만 통과한다 (`61K`·`베이직`처럼 대충 적은 글자는 저장 차단)
-    var planBad = [], newPlanW = wiredOnly ? '' : $('f_newplan').value.trim();
+    // v87 — 유선 단독 건의 변경요금제는 유선 상품명으로 검사하고 그대로 저장한다
+    var planBad = [], newPlanVal = $('f_newplan').value.trim();
     if (planW && !mobilePlanExact(planW))
       planBad.push({ label: '요금제', el: $('f_plan'),
         msg: '요금제는 목록에서 정확한 명칭을 선택해 주세요 (예: 베이직30GB 61,000).' });
-    if (newPlanW && !mobilePlanExact(newPlanW))
-      planBad.push({ label: '변경요금제', el: $('f_newplan'),
-        msg: '변경요금제도 목록에서 정확한 명칭을 선택해 주세요.' });
+    if (newPlanVal && !mobilePlanExact(newPlanVal) && !wiredPlanExact(newPlanVal))
+      planBad.push({ label: wiredOnly ? '변경요금제(유선)' : '변경요금제', el: $('f_newplan'),
+        msg: wiredOnly
+          ? '변경요금제(유선)는 인터넷·WiFi·지니 TV·셋탑 상품명으로 골라 주세요 (예: 인터넷 베이직 + 지니 TV 에센스).'
+          : '변경요금제도 목록에서 정확한 명칭을 선택해 주세요 (무선 요금제 또는 인터넷·TV 상품).' });
     if (planL && !wiredPlanExact(planL))
       planBad.push({ label: '유선 요금제', el: $('f_plan_l'),
         msg: '유선 요금제는 인터넷·WiFi·지니 TV·셋탑 상품명으로 골라 주세요 (예: 인터넷 베이직 + 지니 TV 에센스).' });
@@ -17413,7 +17484,8 @@
     if (MRA_WIRELESS_TYPES.indexOf(slots.w) >= 0 && modelVal && !modelExact(modelVal))
       planBad.push({ label: '기종', el: $('f_model'),
         msg: '기종은 목록에서 정확한 기종명을 선택해 주세요 (예: 갤럭시 S26 · 아이폰 17 프로).' });
-    // v48 — 유선 단독이면 '요금제 변경' 칸 자체가 숨겨지므로 필수 체크에서 면제한다
+    // v48 — 유선 단독이면 예전에는 '요금제 변경' 칸 자체가 숨겨져 필수 체크에서 면제했다
+    // v87 — 칸은 이제 보이지만, 유선 건은 예전처럼 '변경 없음'을 강요하지 않는다(빈칸으로 저장 가능)
     if (!wiredOnly && !planNoneOn() && !hasPlanChange) need.push({ label: '요금제 변경', el: $('planNoneChips') });
     var hasAddon = !!($('f_addon').value.trim() || $('f_addondate').value || (period.addon && period.addon !== 'none'));
     if (!addonNoneOn() && !hasAddon) need.push({ label: '부가서비스', el: $('addonNoneChips') });
@@ -17593,8 +17665,9 @@
       할인유형: wiredOnly ? '' : normalizeDiscount($('f_discount').value),
       특수조건: condText(condList($('f_cond').value)),
       요금제: plan,
-      변경요금제: wiredOnly ? '' : $('f_newplan').value.trim(),
-      요금제변경일자: wiredOnly ? '' : normalizeDate($('f_newdate').value),
+      // v87 — 유선 단독에서도 유선 요금제 변경을 같은 두 컴럼(변경요금제 · 요금제변경일자)에 저장한다
+      변경요금제: newPlanVal,
+      요금제변경일자: normalizeDate($('f_newdate').value),
       부가서비스: $('f_addon').value.trim(),
       부가서비스유지: period.addon === '4' ? '4개월'
         : period.addon === '6' ? '6개월'
@@ -18915,6 +18988,8 @@
         var b = e.target.closest ? e.target.closest('button[data-period]') : null;
         if (!b) return;
         var v = b.getAttribute('data-period');
+        /* v87 — 켜져 있는 1년·2년 칩을 다시 누르면 해제되고 날짜도 비워진다 (직접 수정은 [직접입력]·날짜 칸) */
+        if (kind === 'plan' && PERIOD_YEARS[v] && period.plan === v) v = 'none';
         if (kind === 'plan') { period.plan = v; $('f_plan_none').value = ''; }
         else { period.addon = v; $('f_addon_none').value = ''; }
         paintNoneChips();
@@ -18943,6 +19018,11 @@
       });
       $(id).addEventListener('change', function () {
         if ($(id).value) { $('f_plan_none').value = ''; paintNoneChips(); }
+        /* v87 — 날짜를 손으로 고치면 1년·2년· 4·6개월 칩 표시를 다시 맞춘다 */
+        if (id === 'f_newdate') {
+          period.plan = inferPeriod($('f_newdate').value, $('f_date').value || todayISO());
+          paintPeriodChips();
+        }
       });
     });
     ['f_addon', 'f_addondate'].forEach(function (id) {
