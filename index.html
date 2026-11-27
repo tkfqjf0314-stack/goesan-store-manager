@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0284c7">
 <meta name="color-scheme" content="light">
-<meta name="app-version" content="v87-g1">
+<meta name="app-version" content="v88-g1">
 <meta name="description" content="KT 텔나라네트웍 괴산점 개통 관리 장부 — 일일 개통 등록, 리베이트 집계, 엑셀 내보내기">
 <title>KT 텔나라네트웍 괴산점 · 개통 관리 장부</title>
 
@@ -7200,33 +7200,70 @@
      · 등록/수정/삭제 → 구글 시트에 바로 올리고, 목록을 다시 받아 맞춘다
      · 연동이 꺼져 있으면 예전처럼 이 기기에만 저장된다
      ========================================================= */
-  var sync = { url: '', pin: '', name: '', enabled: false, lastSync: 0, lastError: '', pending: [] };
+  var sync = { url: '', pin: '', name: '', enabled: false, off: false, lastSync: 0, lastError: '', pending: [] };
   var syncing = false;
 
+  /* v88 — 승인 대기 화면의 "공용 장부 연동 설정이 없습니다." 수정
+     ---------------------------------------------------------
+     · 전에는 loadSync() 가 localStorage 값만 그대로 읽어, 설정을 한 번도 저장하지 않은
+       기기(특히 새로 설치한 직원폰)는 기본 주소(DEFAULT_SYNC)가 코드에 있는데도
+       url·pin 이 비고 enabled=false 로 남았다.
+     · 그래서 승인 대기 화면에서 사장님 PIN 을 넣어도 syncOn() 이 false 라 승인이 막혔다.
+     → 기본 주소·PIN 이 있으면 빈칸을 기본값으로 채우고,
+       직원 기기이거나 아직 연동 설정을 끈 적이 없는 초기 상태면 연동을 켜 둔다.
+       (사장님이 직접 [이 기기에만 저장]으로 끈 기기는 off=true 로 남겨 다시 켜지 않는다) */
   function loadSync() {
+    var raw = null, d = null;
     try {
-      var raw = localStorage.getItem(SYNC_KEY);
-      if (!raw) return;
-      var d = JSON.parse(raw) || {};
+      raw = localStorage.getItem(SYNC_KEY);
+      if (raw) d = JSON.parse(raw) || null;
+    } catch (e) { raw = null; d = null; }
+    if (d) {
       sync.url = String(d.url || '');
       sync.pin = String(d.pin || '');
       sync.name = String(d.name || '');
       sync.enabled = !!d.enabled;
+      sync.off = !!d.off;
       sync.lastSync = Number(d.lastSync || 0);
       sync.pending = Array.isArray(d.pending) ? d.pending : [];
-    } catch (e) {}
+    }
+    if (!DEFAULT_SYNC.url || !DEFAULT_SYNC.pin) return;
+    if (!sync.url) sync.url = String(DEFAULT_SYNC.url);
+    if (!sync.pin) sync.pin = String(DEFAULT_SYNC.pin);
+    /* 직원 모드인가 — loadSync 는 loadRole() 보다 먼저 불리므로 저장된 역할을 직접 본다 */
+    var adminStored = false;
+    try { adminStored = sessionStorage.getItem(ROLE_KEY) === 'admin'; } catch (e) { adminStored = false; }
+    // 초기 상태(저장된 설정 없음 · 주소 없음)이거나, 직원 기기이고 사장님이 끈 적이 없으면 켠다
+    if (!raw || !d || !d.url) sync.enabled = true;
+    else if (!adminStored && !sync.off) sync.enabled = true;
   }
 
   function saveSync() {
     try {
       localStorage.setItem(SYNC_KEY, JSON.stringify({
         url: sync.url, pin: sync.pin, name: sync.name,
-        enabled: sync.enabled, lastSync: sync.lastSync, pending: sync.pending
+        enabled: sync.enabled, off: !!sync.off, lastSync: sync.lastSync, pending: sync.pending
       }));
     } catch (e) {}
   }
 
   function syncOn() { return !!(sync.enabled && sync.url && sync.pin); }
+
+  /* v88 — 기본 주소·PIN 으로도 되는지 보고, 비어 있으면 채워 넣는다.
+     승인 대기 화면(승인·다시 확인)은 설정 화면을 거치지 않고 바로 서버로 가야 하므로
+     여기서 한 번 맞춰 주고, 실제로 값을 채웠으면 저장한다. */
+  function ensureSyncDefaults() {
+    var url = normalizeEndpoint(sync.url) || normalizeEndpoint(DEFAULT_SYNC.url || '');
+    var pin = String(sync.pin || DEFAULT_SYNC.pin || '');
+    if (!url || !pin) return false;
+    var changed = false;
+    if (sync.url !== url) { sync.url = url; changed = true; }
+    if (sync.pin !== pin) { sync.pin = pin; changed = true; }
+    if (!sync.enabled) { sync.enabled = true; changed = true; }
+    if (sync.off) { sync.off = false; changed = true; }
+    if (changed) saveSync();
+    return true;
+  }
 
   /* =========================================================
      이 기기 식별 (기기 추방/차단)
@@ -7401,7 +7438,8 @@
     var btn = $('pendRetry');
     if (btn) { btn.disabled = true; btn.textContent = '확인 중…'; }
     function done() { if (btn) { btn.disabled = false; btn.textContent = '다시 확인'; } }
-    if (!syncOn()) { done(); toast('공용 장부 연동 설정이 없습니다. 사장님께 문의해 주세요.', true); return; }
+    /* v88 — 기본 주소·PIN 이 코드에 있으면 그것으로 확인한다 (설정을 안 건드린 기기에서도 동작) */
+    if (!ensureSyncDefaults()) { done(); toast('공용 장부 연동 설정이 없습니다. 사장님께 문의해 주세요.', true); return; }
     runSync({ quiet: true, quietFail: true, force: true }).then(function (ok) {
       done();
       if (ok && !pendingStored()) { showPending(false); toast('승인되었습니다. 장부를 엽니다.'); location.reload(); }
@@ -7418,23 +7456,32 @@
       if (errBox) { errBox.textContent = '사장님 PIN 을 넣어 주세요.'; errBox.hidden = false; }
       return;
     }
-    if (!syncOn()) {
+    /* v88 — 기본 주소·PIN 이 코드에 있으면 그것으로 승인을 보낸다 */
+    if (!ensureSyncDefaults()) {
       if (errBox) { errBox.textContent = '공용 장부 연동 설정이 없습니다.'; errBox.hidden = false; }
       return;
     }
     var info = deviceInfo();
     var btn = $('pendApprove');
     if (btn) btn.disabled = true;
-    fetchJson(sync.url, {
+    var url = normalizeEndpoint(sync.url) || normalizeEndpoint(DEFAULT_SYNC.url || '');
+    var storePin = String(sync.pin || DEFAULT_SYNC.pin || '');
+    fetchJson(url, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({
-        pin: sync.pin, action: 'approve_device', adminPin: pin, value: info.deviceId,
+        pin: storePin, action: 'approve_device', adminPin: pin, value: info.deviceId,
         deviceId: info.deviceId, device: info.device, name: info.name, ua: info.ua
       }),
       redirect: 'follow'
     }).then(function (data) {
       if (data && data.ok === true) {
+        /* v88 — 승인에 쓴 주소·PIN 으로 연동 설정을 확정한다 (다음 실행부터 설정 없이 바로 연결) */
+        sync.url = url;
+        sync.pin = storePin;
+        sync.enabled = true;
+        sync.off = false;
+        saveSync();
         clearPending();
         if (data.owner === 'Y' || data.deviceId === info.deviceId) markOwnerDevice();   // v49 — 사장님 PIN 으로 승인한 기기
         if (data.owner === 'Y') toast('👑 사장님 기기로 승인했습니다. 장부를 엽니다.');
@@ -12630,6 +12677,8 @@
     sync.pin = pin;
     sync.name = name;
     sync.enabled = wantOn;
+    /* v88 — 사장님이 직접 끈 기기는 껐다는 표시를 남겨, 다음 실행에서 저절로 켜지지 않게 한다 */
+    sync.off = !wantOn;
     saveSync();
 
     // 새로 연동을 켜면 이 기기에 있던 장부도 시트에 올린다 (id 기준이라 중복 없음)
