@@ -9,7 +9,7 @@
  *    차단된 기기/직원은 list·upsert 요청에 {ok:false, blocked:true} 만 받고 데이터는 받지 못합니다.
  *  · v32 부터 기기 승인제: '_접속기기' 의 상태 칸이 approved / pending / blocked 이고
  *    처음 보는 기기는 pending 으로 적혀 사장님이 [승인]하기 전에는 장부를 받지 못합니다
- *    ({ok:false, error:'device_pending'}). 사장님 PIN(201402)을 보낸 기기는 자동 승인 + owner 보호.
+ *    ({ok:false, error:'device_pending'}). 사장님 PIN 을 보낸 기기는 자동 승인 + owner 보호.
  *    owner 기기(이름 방지유)는 block·kick 요청에도 {ok:false, error:'cannot_kick_owner'} 만 돌려줍니다.
  *
  *  설치 : 스프레드시트 → 확장 프로그램 → Apps Script 에 이 파일 전체를 붙여넣고
@@ -27,7 +27,7 @@ var SHEET_NAME   = '전체_통합';          // 메인(통합) 시트 이름 —
    밴드 앱의 LEDGER_PIN 에도 같은 값이 들어 있습니다.
    비운 채로 배포하면 앱에 "매장 PIN 이 아직 정해지지 않았습니다" 라고 안내가 뜹니다. */
 var STORE_PIN    = '0315';               // 괴산점 전용 매장 PIN
-var ADMIN_PIN    = '201402';             // 사장님(관리자) PIN — 삭제·엑셀·백업·기기 승인은 이 PIN 이 있어야
+var ADMIN_PIN    = '240909';             // 사장님(관리자) PIN — 삭제·엑셀·백업·기기 승인은 이 PIN 이 있어야
 /* 시트에 붙여 만든 스크립트(스프레드시트 → 확장 프로그램 → Apps Script)라면 이 값을 비워 두세요.
    따로 만든 스크립트 프로젝트라면 새 시트 주소의 /d/…/edit 사이 값을 넣습니다. */
 var SPREADSHEET_ID = '';
@@ -147,7 +147,7 @@ function doGet(e) {
 /**
  * 저장/삭제/기기관리 : 본문
  *   {"pin":"(매장 PIN)","action":"upsert"|"delete"|"list","record":{…},"id":"…","deviceId":"…"}
- *   {"pin":"(매장 PIN)","action":"devices"|"block"|"unblock","adminPin":"201402","type":"device"|"staff","value":"…"}
+ *   {"pin":"(매장 PIN)","action":"devices"|"block"|"unblock","adminPin":"(사장님 PIN)","type":"device"|"staff","value":"…"}
  */
 function doPost(e) {
   var req = {};
@@ -749,7 +749,7 @@ function getBlockSheet_() { return sheetByName_(BLOCK_SHEET, BLOCK_HEAD); }
    ---------------------------------------------------------
    · 기기 탭 '_접속기기' 에 상태(approved / pending / blocked)와 owner 칸을 더했다.
    · 처음 보는 기기는 pending 으로 적히고, 장부 레코드 없이 {ok:false, error:'device_pending'} 만 받는다.
-   · 사장님 PIN(201402)을 함께 보낸 기기는 자동 approved + owner 로 등록된다.
+   · 사장님 PIN 을 함께 보낸 기기는 자동 approved + owner 로 등록된다.
    · 승인제 이전부터 쓰던 기기(상태 칸이 비어 있던 줄)는 모두 approved 로 옮겨져 그대로 쓴다.
    · owner 기기(또는 이름이 방지유)는 추방·반려할 수 없다 — cannot_kick_owner.
    --------------------------------------------------------- */

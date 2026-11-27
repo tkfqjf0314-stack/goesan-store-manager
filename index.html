@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0284c7">
 <meta name="color-scheme" content="light">
-<meta name="app-version" content="v88-g1">
+<meta name="app-version" content="v89-g1">
 <meta name="description" content="KT 텔나라네트웍 괴산점 개통 관리 장부 — 일일 개통 등록, 리베이트 집계, 엑셀 내보내기">
 <title>KT 텔나라네트웍 괴산점 · 개통 관리 장부</title>
 
@@ -4108,7 +4108,7 @@
      · 비교는 SHA-256 다이제스트로만 한다 (아래 sha256Hex · checkAdminPin).
      · 사용자가 넣는 PIN 은 예전과 같다 — 화면·동작은 그대로다.
      · 서버(삭제·차단)로 보낼 때 필요한 값은 잠금 해제 때 입력한 값을 sessionStorage 에만 둔다. */
-  var ADMIN_PIN_HASH = 'd1408c862901dff3bfa3c635be3e2b4d7167bf7ade280b29905b63d998ca7763';
+  var ADMIN_PIN_HASH = '6b96f9eb6f5c3d53f6370c2e565e53e4e79715f33ede2f2d33d407b8f3ee37d3';
   var ADMIN_PIN_KEY = 'kt_goesan_adminpin_v1';
   var ROLE_KEY = 'kt_goesan_role_v1';
   // 관리자 모드 자동 잠금 — 10분(600,000ms) 동안 클릭·터치·키입력이 없으면 직원 모드로 돌아간다
@@ -8411,10 +8411,10 @@
      · 사장님: "개통장부도 일보 쓰면 알람 울리게 되나" → "다울리게해줘 관리자모드 들어갈때만"
               → 다시 "계속울리게"
      · 규칙
-         ① 관리자 PIN(201402)을 **한 번이라도** 통과한 기기는 이 기기 알림 플래그를 남긴다
+         ① 관리자 PIN 을 **한 번이라도** 통과한 기기는 이 기기 알림 플래그를 남긴다
             (`localStorage kt_store_admin_notify_v1` = '1' · 영구)
             → 10분 자동 잠금으로 직원 화면이 된 뒤에도 새 개통 · 수정 알림이 계속 울린다.
-         ② 201402 를 한 번도 넣지 않은 직원 폰은 플래그가 없어 **절대 울리지 않는다**.
+         ② 관리자 PIN 을 한 번도 넣지 않은 직원 폰은 플래그가 없어 **절대 울리지 않는다**.
          ③ 이 기기에서 방금 직접 저장 · 수정한 건은 스스로에게 울리지 않는다.
          ④ 알림은 전용 앱(APK) 브리지 → 네이티브 상단 알림(채널 store_alerts),
             브라우저(PWA)면 Notification API. 둘 다 없으면 화면 토스트로 알린다.
@@ -8439,7 +8439,7 @@
     return window.__ktNotifyLog;
   }
 
-  /* '1' 켜짐 · '0' 사장님이 직접 끔 · 없음 201402 를 한 번도 안 넣은 기기 */
+  /* '1' 켜짐 · '0' 사장님이 직접 끔 · 없음 관리자 PIN 을 한 번도 안 넣은 기기 */
   function notifyFlag() {
     try { return localStorage.getItem(NOTIFY_FLAG_KEY); } catch (e) { return null; }
   }
@@ -8816,7 +8816,7 @@
     btn.textContent = on ? '🔕 새 개통 알림 끄기 (이 기기)' : '🔔 새 개통 알림 켜기 (이 기기)';
     btn.title = on
       ? '이 기기는 새 개통·수정이 생기면 10분 잠금 뒤에도 계속 알림이 울립니다. 눌러서 끕니다.'
-      : '관리자 PIN(201402)을 넣은 기기에서만 울립니다. 눌러서 켭니다.';
+      : '관리자 PIN을 넣은 기기에서만 울립니다. 눌러서 켭니다.';
   }
 
   /* 앱을 열 때 한 번 — 설정을 앱에 넘기고, 켜져 있으면 조용한 확인을 시작한다 */
@@ -8937,7 +8937,7 @@
   }
 
   /* ---------------- 이 기기 표시 (이전 버전 호환) ----------------
-     201402 를 넣은 기기에 남겨 두는 표시. v84b 부터 알람함은 모든 기기에서 모으므로
+     관리자 PIN 을 넣은 기기에 남겨 두는 표시. v84b 부터 알람함은 모든 기기에서 모으므로
      이 값으로 알람을 막지 않는다(예전 저장값이 있어도 그대로 동작). */
   function alarmDeviceOn() {
     try { return localStorage.getItem(ALARM_DEV_KEY) === '1'; } catch (e) { return false; }
@@ -9453,7 +9453,7 @@
     if (d && d.open) d.close();
   }
 
-  /* 201402 통과 직후 — 이 기기를 관리자 알람 기기로 등록하고 오늘 D-DAY 를 조용히 채운다 */
+  /* 관리자 PIN 통과 직후 — 이 기기를 관리자 알람 기기로 등록하고 오늘 D-DAY 를 조용히 채운다 */
   function alarmOnAdmin() {
     alarmSetDevice(true);
     try { alarmAudioCtx(); } catch (e) {}
@@ -16495,7 +16495,7 @@
     saveRole();
     el.adminDialog.close();
     applyRole();
-    /* v82 — 201402 를 넣은 기기는 새 개통 알림을 켠다(한 번 켜면 10분 잠금 뒤에도 계속).
+    /* v82 — 관리자 PIN 을 넣은 기기는 새 개통 알림을 켠다(한 번 켜면 10분 잠금 뒤에도 계속).
        사장님이 메뉴에서 직접 끈 기기('0')는 다시 켜지 않는다. */
     var flag = notifyFlag();
     if (flag === null) notifySetDeviceOn(true, { silent: true });

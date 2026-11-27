@@ -5,7 +5,7 @@
 같은 화면을 안드로이드 앱(APK)으로도 감쌌습니다.
 
 - 웹 주소: https://tkfqjf0314-stack.github.io/goesan-store-manager/
-- 웹 버전: **v88-g1** (v87-g1 → 승인 대기 화면에서 사장님 PIN 승인이 막히던 "공용 장부 연동 설정이 없습니다." 수정)
+- 웹 버전: **v89-g1** (v88-g1 → 관리자(사장님) PIN 을 바꾸면서 앱 화면의 예전 PIN 표기를 정리)
 - 안드로이드: `KT-괴산점-개통장부.apk` · 패키지 `com.ktgoesan.ledger` · 1.0.0 — 빌드 안내 `android/README.md`
 
 ## 매장 설정 (index.html 안)
@@ -14,7 +14,7 @@
 | --- | --- | --- |
 | 매장명 | `KT 텔나라네트웍 괴산점` | 제목·머리글 |
 | 매장 PIN | `0315` | `defaultStorePin()` (`String.fromCharCode(48, 51, 49, 53)`) |
-| 관리자(사장님) PIN | `201402` (6자리) | `ADMIN_PIN_HASH` = sha256('201402') |
+| 관리자(사장님) PIN | 6자리 (2026-11-27 변경 · 평문은 코드에 없음) | `ADMIN_PIN_HASH` = sha256(PIN) · 서버 `ADMIN_PIN` 은 `apps-script/Code.gs` |
 | 직원 명부 | `방지유` · `우광걸` | `STAFF_LIST` |
 | 사장님(추방 불가) | `방지유` | `OWNER_NAMES` |
 | 공용 장부 주소 | `https://script.google.com/macros/s/AKfycbxXSL5aBcm_SlwxMARQhuU5AIlfLtpAYsXuYiOpcT7sryRjYEdWbdoC5mKBVesN4BtNgg/exec` (2026-11-26 배포) → 앱 `더보기 → 공용 장부 연동` 에 자동으로 채워짐 · **v88 부터는 설정을 한 번도 저장하지 않은 기기(새로 설치한 직원폰)도 이 주소·PIN 으로 연동이 자동으로 켜진다** | `DEFAULT_SYNC.url` |

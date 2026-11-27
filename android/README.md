@@ -81,7 +81,7 @@ WebView 로컬 데이터가 초기화됩니다). 기본 경로는 `android/.keys
 
 ## 관리자 새 개통 알림 (v2.1)
 
-웹 장부(v82)가 관리자 PIN(201402)을 통과한 기기에서만 켠다. 201402 를 한 번도 넣지 않은 직원 폰은
+웹 장부(v82)가 관리자 PIN 을 통과한 기기에서만 켠다. 관리자 PIN 을 한 번도 넣지 않은 직원 폰은
 `enabled=false` 라 앱이 아무 알림도 띄우지 않는다.
 
 | 웹 → 앱 (`window.KTStoreBridge` · `window.KTGoesanApp` · 기존 이름 `window.KTChilgeumApp` 도 같은 함수) | 하는 일 |
